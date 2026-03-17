@@ -196,7 +196,8 @@ app.get("/posts", async (c) => {
     .from("posts")
     .select(`
       *,
-      users ( username, avatar )
+      users ( username, avatar ),
+      post_likes ( count )
     `)
     .order('created_at', { ascending: false });
 
@@ -221,7 +222,7 @@ app.get("/posts/:id", async (c) => {
 });
 
 app.post("/protected/posts", async (c) => {
-  const { title, content, privacy = "public", image_urls = [] } = await c.req.json();
+  const { content, privacy = "public", image_urls = [] } = await c.req.json();
   const supabase = c.get("supabase");
   const jwtPayload = c.get("jwtPayload");
   
@@ -229,7 +230,6 @@ app.post("/protected/posts", async (c) => {
   const { data: postData, error: postError } = await supabase
     .from("posts")
     .insert({ 
-      title, 
       content, 
       privacy,
       user_id: jwtPayload.userId 
