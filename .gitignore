@@ -23,10 +23,10 @@ dist-ssr
 *.sln
 *.sw?
 
-# Environment variables (CRITICAL)
+# Env files (CRITICAL)
 .env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
-
+.env.*
+!.env.example
+.dev.vars
+wrangler.toml
+wrangler.jsonc
