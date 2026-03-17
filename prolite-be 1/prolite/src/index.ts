@@ -190,8 +190,9 @@ app.get("/protected/posts/:id", async (c) => {
 
 app.get("/posts", async (c) => {
   const supabase = c.get("supabase");
-  
+
   // Join users table to get the author's username
+  // them post like count
   const { data, error } = await supabase
     .from("posts")
     .select(`
@@ -222,21 +223,22 @@ app.get("/posts/:id", async (c) => {
 });
 
 app.post("/protected/posts", async (c) => {
+  // bo title vi khong su dung 
   const { content, privacy = "public", image_urls = [] } = await c.req.json();
   const supabase = c.get("supabase");
   const jwtPayload = c.get("jwtPayload");
-  
+
   // 1. Insert Post
   const { data: postData, error: postError } = await supabase
     .from("posts")
-    .insert({ 
-      content, 
+    .insert({
+      content,
       privacy,
-      user_id: jwtPayload.userId 
+      user_id: jwtPayload.userId
     })
     .select()
     .single();
-    
+
   if (postError) {
     return c.json({ error: postError.message }, 500);
   }
