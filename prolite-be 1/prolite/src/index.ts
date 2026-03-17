@@ -140,6 +140,7 @@ app.post("/login", async (c) => {
     userId: user.user_id,
     email: user.email,
     username: user.username,
+    role: user.role || "user",
     exp: Math.floor(Date.now() / 1000) + 60 * 60, // 1 hour
   };
 
@@ -151,6 +152,7 @@ app.post("/login", async (c) => {
       userId: payload.userId,
       email: payload.email,
       username: payload.username,
+      role: payload.role,
     },
   });
 });
