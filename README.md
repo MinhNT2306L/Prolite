@@ -19,6 +19,9 @@ Pass the `CloudflareBindings` as generics when instantiation `Hono`:
 // src/index.ts
 const app = new Hono<{ Bindings: CloudflareBindings }>()
 ```
-**Tk admin:**
-Email:$admin@prolite.com$
-Password:$Admin@123456$
+
+**Admin account:**
+```txt
+Email:admin@prolite.com
+Password:Admin@123456
+```
