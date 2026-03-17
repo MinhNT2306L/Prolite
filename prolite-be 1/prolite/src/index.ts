@@ -180,7 +180,7 @@ app.get("/protected/posts/:id", async (c) => {
   const { data, error } = await supabase
     .from("posts")
     .select("*")
-    .eq("id", id)
+    .eq("post_id", id)
     .single();
   if (error) {
     return c.json({ error: error.message }, 500);
@@ -214,7 +214,7 @@ app.get("/posts/:id", async (c) => {
   const { data, error } = await supabase
     .from("posts")
     .select("*")
-    .eq("id", id)
+    .eq("post_id", id)
     .single();
   if (error) {
     return c.json({ error: error.message }, 404);
@@ -332,7 +332,7 @@ app.delete("/protected/comments/:id", async (c) => {
   const { id } = c.req.param();
   const supabase = c.get("supabase");
 
-  const { error } = await supabase.from("comments").delete().eq("id", id);
+  const { error } = await supabase.from("comments").delete().eq("comment_id", id);
 
   if (error) {
     return c.json({ error: error.message }, 500);
