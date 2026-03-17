@@ -4,7 +4,7 @@ import { adminGuard } from "../middlewares/adminGuard";
 
 const admin = new Hono<AppEnv>();
 
-// Tất cả route /protected/admin/* đều phải qua adminGuard
+// xac thuc admin
 admin.use("/protected/admin/*", adminGuard);
 
 // ─── Dashboard Stats ────────────────────────────────────────
@@ -26,7 +26,7 @@ admin.get("/protected/admin/stats", async (c) => {
 
 // ─── Users CRUD ─────────────────────────────────────────────
 
-// GET: danh sách users (ẩn password)
+// GET: lay dsach user 
 admin.get("/protected/admin/users", async (c) => {
   const supabase = c.get("supabase");
 
@@ -39,7 +39,7 @@ admin.get("/protected/admin/users", async (c) => {
   return c.json(data);
 });
 
-// POST: tạo user mới
+// POST: tao user
 admin.post("/protected/admin/users", async (c) => {
   const body = await c.req.json();
   const { email, username, password, role = "user", bio, avatar } = body;
@@ -48,7 +48,7 @@ admin.post("/protected/admin/users", async (c) => {
     return c.json({ error: "email, username, password are required" }, 400);
   }
 
-  // Hash password (SHA-256 — giống logic hiện tại trong index.ts)
+  // Hash password
   const encoder = new TextEncoder();
   const hashBuffer = await crypto.subtle.digest("SHA-256", encoder.encode(password));
   const hashedPassword = Array.from(new Uint8Array(hashBuffer))
@@ -102,7 +102,7 @@ admin.put("/protected/admin/users/:id", async (c) => {
 admin.put("/protected/admin/users/:id/reset-password", async (c) => {
   const { id } = c.req.param();
 
-  // Sinh mật khẩu ngẫu nhiên 12 ký tự
+  // create pw ngau nhien trong truong hop admin quen mat khau cua user va muon reset cho user do
   const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%";
   const newPassword = Array.from(crypto.getRandomValues(new Uint8Array(12)))
     .map((b) => chars[b % chars.length])
@@ -126,11 +126,11 @@ admin.put("/protected/admin/users/:id/reset-password", async (c) => {
 
   if (error) return c.json({ error: error.message }, 500);
 
-  // Trả mật khẩu mới về cho admin (chỉ hiện 1 lần để copy)
+  // return pwd cho admin 
   return c.json({ message: "Password reset successful", newPassword });
 });
 
-// DELETE: xóa user
+// DELETE: xoa user
 admin.delete("/protected/admin/users/:id", async (c) => {
   const { id } = c.req.param();
 
