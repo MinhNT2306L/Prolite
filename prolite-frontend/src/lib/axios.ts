@@ -3,10 +3,9 @@ import axios from "axios";
 
 const api = axios.create({
   baseURL: "http://127.0.0.1:8787",
-  withCredentials: true,
 });
 
-axios.interceptors.request.use((config) => {
+api.interceptors.request.use((config) => {
   const token = useAuthStore.getState().token;
 
   if (token) {
@@ -15,4 +14,21 @@ axios.interceptors.request.use((config) => {
 
   return config;
 });
+
+// Auto-logout on 401 (expired token)
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      const { token } = useAuthStore.getState();
+      // Only auto-logout if we had a token (it expired)
+      if (token) {
+        useAuthStore.getState().clearState();
+        window.location.href = "/signin";
+      }
+    }
+    return Promise.reject(error);
+  },
+);
+
 export default api;

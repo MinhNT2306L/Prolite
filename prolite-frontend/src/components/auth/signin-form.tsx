@@ -1,14 +1,17 @@
+// From shadcn
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { Label } from "./ui/label"
+import { Label } from "@/components/ui/label"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
+// React-router Hook & Global state
 import { useNavigate } from "react-router"
 import { useAuthStore } from "@/stores/useAuthStore"
 
+// Use zod to validate sign in form
 const signinSchema = z.object({
     email: z.email("Invalid email address"),
     password: z.string().min(1, "Password is required"),
@@ -19,6 +22,7 @@ export function SigninForm({
     className,
     ...props
 }: React.ComponentProps<"div">) {
+    // Zod Variables
     const {
         register,
         handleSubmit,
@@ -28,7 +32,8 @@ export function SigninForm({
         resolver: zodResolver(signinSchema),
     })
 
-    const { signIn, token } = useAuthStore();
+    // Use React-router Hook & Global state
+    const { signIn } = useAuthStore();
     const navigate = useNavigate();
 
     const onSubmit = async (data: SigninFormValues) => {
@@ -50,6 +55,7 @@ export function SigninForm({
         <div className={cn("flex flex-col gap-6", className)} {...props}>
             <Card className="overflow-hidden p-0">
                 <CardContent className="grid p-0 md:grid-cols-2">
+                    {/* Image */}
                     <div className="relative hidden bg-muted md:block">
                         <img
                             src="/src/assets/signin-image.jpg"
@@ -94,6 +100,7 @@ export function SigninForm({
                     </form>
                 </CardContent>
             </Card>
+            {/* Footer */}
             <div className="text-xs text-muted-foregroundtext-xs text-balance px-6 text-center *:[a]:hover:text-primary text-muted-foreground *:[a]:underline *:[a]:underline-offetset-4">
                 By clicking continue, you agree to our <a href="#">Terms of Service</a>{" "}
                 and <a href="#">Privacy Policy</a>.

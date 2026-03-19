@@ -1,241 +1,170 @@
-import { useEffect, useState } from "react";
+// Components
+import { PageLayout } from "@/components/layout/PageLayout";
+import { PostCard } from "@/components/newfeed/PostCard";
+import { PostComposer } from "@/components/newfeed/PostComposer";
+import { PostComposerModal } from "@/components/newfeed/PostComposerModal";
+// Function from library
+import { preparePostImageUrls } from "@/lib/postImages";
+// React Hooks & Global states
+import { useRef, useState, type Dispatch, type SetStateAction } from "react";
+import { useAuthStore } from "@/stores/useAuthStore";
+import { useGlobalStore } from "@/stores/useGlobalStore";
+import { usePostService } from "@/stores/usePostService";
+// Custom Hooks
+import { useUserLookup } from "@/hooks/useUserLookup";
+import { useInitData } from "@/hooks/useInitData";
 
-type Post = {
-  id: string;
-  content: string;
-  author: { username: string };
-  createdAt: string;
-  likes: number;
-};
-
-const BRAND = "oklch(0.546 0.2153 262.8719)";
-
-// VD: rewriteWithAI("hello world") => "Hello world."
-const rewriteWithAI = (text: string) => {
-  return text.charAt(0).toUpperCase() + text.slice(1).trim() + ".";
-};
-
-// ================= NEW FEEDS PAGE =================
 const NewFeedsPage = () => {
-  const user = { username: "lucas_dev" };
+  // Global states
+  const user = useAuthStore((s) => s.user);
+  const fetchAllUsersData = useGlobalStore((s) => s.fetchAllUsersData);
+  const postsData = usePostService((s) => s.postsData);
+  const fetchAllPostsData = usePostService((s) => s.fetchAllPostsData);
+  const newPost = usePostService((s) => s.newPost);
 
-  const [posts, setPosts] = useState<Post[]>([]);
+  // React Hooks
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [content, setContent] = useState("");
   const [modalContent, setModalContent] = useState("");
+  const [selectedImageUrls, setSelectedImageUrls] = useState<string[]>([]);
+  const [modalImageUrls, setModalImageUrls] = useState<string[]>([]);
+  const [selectedImageError, setSelectedImageError] = useState<string | null>(
+    null,
+  );
+  const [modalImageError, setModalImageError] = useState<string | null>(null);
   const [showComposer, setShowComposer] = useState(false);
+  const [isSubmittingPost, setIsSubmittingPost] = useState(false);
 
-  useEffect(() => {
-    setPosts([
-      {
-        id: "1",
-        content: "Chào mừng đến Prolite 🌌",
-        author: { username: "alice" },
-        createdAt: new Date().toISOString(),
-        likes: 12,
-      },
-    ]);
-  }, []);
+  // When posts & users data have changes, react will automatically fetch data again
+  useInitData(fetchAllUsersData, fetchAllPostsData);
 
-  const createPost = (text: string) => {
-    if (!text.trim()) return;
+  // Convert usersData into a object type for accessing to user faster
+  const userLookup = useUserLookup();
 
-    const aiContent = rewriteWithAI(text);
-
-    const newPost: Post = {
-      id: Date.now().toString(),
-      content: aiContent,
-      author: { username: user.username },
-      createdAt: new Date().toISOString(),
-      likes: 0,
-    };
-
-    setPosts((prev) => [newPost, ...prev]);
+  // Create new post 
+  const createPost = async (postContent: string, imageUrls: string[]) => {
+    const trimmed = postContent.trim();
+    if ((!trimmed && imageUrls.length === 0) || !user) return false;
+    try {
+      setIsSubmittingPost(true);
+      await newPost(trimmed, user, imageUrls);
+      return true;
+    } catch (err) {
+      console.log("Failed to create post", err);
+      return false;
+    } finally {
+      setIsSubmittingPost(false);
+    }
   };
 
-  // Quick post from the top box
-  const handleQuickPost = () => {
-    createPost(content);
-    setContent("");
+  // Display images in post input
+  const appendImagesToDraft = async (
+    files: FileList | null,
+    draftImageUrls: string[],
+    setDraftImageUrls: Dispatch<SetStateAction<string[]>>,
+    setDraftImageError: Dispatch<SetStateAction<string | null>>,
+  ) => {
+    const { imageUrls, error } = await preparePostImageUrls(
+      files,
+      draftImageUrls.length,
+    );
+    if (imageUrls.length > 0) {
+      setDraftImageUrls((current) => [...current, ...imageUrls]);
+    }
+    setDraftImageError(error);
   };
 
-  // Post from the composer modal
-  const handleModalPost = () => {
-    createPost(modalContent);
-    setModalContent("");
-    setShowComposer(false);
+  // Handle posting new post on home page
+  const handleQuickPost = async () => {
+    const created = await createPost(content, selectedImageUrls);
+    if (created) {
+      setContent("");
+      setSelectedImageUrls([]);
+      setSelectedImageError(null);
+      textareaRef.current?.focus();
+    }
   };
 
-  const deletePost = (id: string) => {
-    setPosts((prev) => prev.filter((p) => p.id !== id));
+  // Handle posting new post on composer modal 
+  const handleModalPost = async () => {
+    const created = await createPost(modalContent, modalImageUrls);
+    if (created) {
+      setModalContent("");
+      setModalImageUrls([]);
+      setModalImageError(null);
+      setShowComposer(false);
+    }
   };
+
+  // For validating fetching user data.
+  if (!user) return <div className="min-h-screen bg-gradient-blue" />;
 
   return (
-    <div className="min-h-screen bg-black text-white flex flex-col">
-      {/* TOP BAR */}
-      <header className="sticky top-0 bg-black border-b border-gray-800">
-        <div
-          className="text-center py-3 text-xl font-black"
-          style={{ color: BRAND }}
-        >
-          PROLITE
-        </div>
-      </header>
+    // Page layout
+    <PageLayout username={user.username} activePath="/" onNewPost={() => setShowComposer(true)} >
+      <div className="max-w-xl mx-auto px-4 py-6 space-y-0 no-scrollbar">
+        {/* Post Composer */}
+        <PostComposer
+          username={user.username}
+          content={content}
+          imageUrls={selectedImageUrls}
+          imageError={selectedImageError}
+          isSubmitting={isSubmittingPost}
+          textareaRef={textareaRef}
+          onContentChange={setContent}
+          onImageSelect={(files) =>
+            appendImagesToDraft(
+              files,
+              selectedImageUrls,
+              setSelectedImageUrls,
+              setSelectedImageError,
+            )
+          }
+          onRemoveImage={(index) => {
+            setSelectedImageUrls((imgs) => imgs.filter((_, i) => i !== index));
+            setSelectedImageError(null);
+          }}
+          onSubmit={() => handleQuickPost()}
+        />
 
-      {/* FEED */}
-      <main className="flex-1 flex justify-center">
-        <div className="w-full max-w-xl px-4 py-6 space-y-6">
-          {/*QUICK POST BOX */}
-          <div className="border border-gray-800 rounded-2xl p-4">
-            <textarea
-              placeholder="Bạn đang nghĩ gì?"
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              rows={2}
-              className="w-full bg-transparent outline-none resize-none"
-            />
+        {/* Post data cards */}
+        {postsData.map((post, idx) => (
+          <PostCard
+            key={post.post_id}
+            post={post}
+            currentUser={user}
+            userLookup={userLookup}
+            idx={idx}
+          />
+        ))}
+      </div>
 
-            <div className="flex justify-end mt-2">
-              <button
-                onClick={handleQuickPost}
-                className="px-4 py-1.5 rounded-full bg-white text-black font-bold"
-              >
-                Đăng
-              </button>
-            </div>
-          </div>
-
-          {/* POSTS */}
-          {posts.map((post) => (
-            <PostCard
-              key={post.id}
-              post={post}
-              currentUser={user.username}
-              onDelete={deletePost}
-            />
-          ))}
-        </div>
-      </main>
-
-      {/* OMPOSER MODAL */}
-      {showComposer && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center px-4">
-          <div className="bg-gray-900 rounded-2xl p-5 w-full max-w-md">
-            <textarea
-              placeholder="Viết bài chi tiết..."
-              value={modalContent}
-              onChange={(e) => setModalContent(e.target.value)}
-              rows={4}
-              className="w-full bg-transparent outline-none resize-none"
-            />
-
-            <div className="flex justify-end gap-3 mt-4">
-              <button
-                onClick={() => setShowComposer(false)}
-                className="text-gray-400"
-              >
-                Huỷ
-              </button>
-
-              <button
-                onClick={handleModalPost}
-                className="px-4 py-1.5 rounded-full bg-white text-black font-bold"
-              >
-                Đăng
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* BOTTOM NAV */}
-      <footer className="sticky bottom-0 bg-black border-t border-gray-800">
-        <div className="max-w-xl mx-auto flex justify-around py-3 text-sm">
-          <button onClick={() => window.location.reload()}>Home</button>
-
-          <button className="text-2xl" onClick={() => setShowComposer(true)}>
-            ＋
-          </button>
-
-          <button onClick={() => (window.location.href = "/profile")}>
-            Profile
-          </button>
-        </div>
-      </footer>
-    </div>
+      {/* Post composer modal */}
+      <PostComposerModal
+        isOpen={showComposer}
+        username={user.username}
+        content={modalContent}
+        imageUrls={modalImageUrls}
+        imageError={modalImageError}
+        isSubmitting={isSubmittingPost}
+        onClose={() => setShowComposer(false)}
+        onContentChange={setModalContent}
+        onImageSelect={(files) =>
+          appendImagesToDraft(
+            files,
+            modalImageUrls,
+            setModalImageUrls,
+            setModalImageError,
+          )
+        }
+        onRemoveImage={(index) => {
+          setModalImageUrls((imgs) => imgs.filter((_, i) => i !== index));
+          setModalImageError(null);
+        }}
+        onSubmit={() => handleModalPost()}
+      />
+    </PageLayout>
   );
 };
 
 export default NewFeedsPage;
-
-// ================= POST CARD =================
-
-interface PostCardProps {
-  post: Post;
-  currentUser: string;
-  onDelete: (id: string) => void;
-}
-
-function PostCard({ post, currentUser, onDelete }: PostCardProps) {
-  const isAuthor = post.author.username === currentUser;
-
-  const storageKey = `like_${currentUser}_${post.id}`;
-
-  const [liked, setLiked] = useState(
-    () => localStorage.getItem(storageKey) === "true",
-  );
-
-  const [likes, setLikes] = useState(post.likes);
-  const [animating, setAnimating] = useState(false);
-
-  const toggleLike = () => {
-    const newLiked = !liked;
-
-    setLiked(newLiked);
-    setLikes((prev) => (newLiked ? prev + 1 : prev - 1));
-    localStorage.setItem(storageKey, newLiked.toString());
-
-    setAnimating(true);
-    setTimeout(() => setAnimating(false), 250);
-  };
-
-  return (
-    <div className="border border-gray-800 rounded-2xl p-5 space-y-4">
-      {/* HEADER */}
-      <div className="flex justify-between items-start">
-        <div className="flex gap-3">
-          <div className="w-11 h-11 rounded-full bg-gray-700" />
-
-          <div>
-            <div className="font-bold">{post.author.username}</div>
-            <div className="text-xs text-gray-500">
-              {new Date(post.createdAt).toLocaleString()}
-            </div>
-          </div>
-        </div>
-
-        {/* DELETE BUTTON */}
-        {isAuthor && (
-          <button
-            onClick={() => onDelete(post.id)}
-            className="text-gray-500 hover:text-gray-300 text-lg"
-          >
-            X
-          </button>
-        )}
-      </div>
-
-      {/* CONTENT */}
-      <p className="text-base leading-relaxed">{post.content}</p>
-
-      {/* LIKE BUTTON */}
-      <button
-        onClick={toggleLike}
-        className={`text-xl transition-transform ${
-          animating ? "scale-125" : "hover:scale-110"
-        }`}
-      >
-        {liked ? "❤️" : "🤍"} {likes}
-      </button>
-    </div>
-  );
-}

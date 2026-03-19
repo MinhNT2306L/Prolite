@@ -195,12 +195,14 @@ app.get("/posts", async (c) => {
   // them post like count
   const { data, error } = await supabase
     .from("posts")
-    .select(`
+    .select(
+      `
       *,
       users ( username, avatar ),
       post_likes ( count )
-    `)
-    .order('created_at', { ascending: false });
+    `,
+    )
+    .order("created_at", { ascending: false });
 
   if (error) {
     return c.json({ error: error.message }, 500);
@@ -213,7 +215,13 @@ app.get("/posts/:id", async (c) => {
   const supabase = c.get("supabase");
   const { data, error } = await supabase
     .from("posts")
-    .select("*")
+    .select(
+      `
+      *,
+      users ( username, avatar ),
+      post_images ( image_url, position )
+    `,
+    )
     .eq("post_id", id)
     .single();
   if (error) {
@@ -223,7 +231,7 @@ app.get("/posts/:id", async (c) => {
 });
 
 app.post("/protected/posts", async (c) => {
-  // bo title vi khong su dung 
+  // bo title vi khong su dung
   const { content, privacy = "public", image_urls = [] } = await c.req.json();
   const supabase = c.get("supabase");
   const jwtPayload = c.get("jwtPayload");
@@ -234,7 +242,7 @@ app.post("/protected/posts", async (c) => {
     .insert({
       content,
       privacy,
-      user_id: jwtPayload.userId
+      user_id: jwtPayload.userId,
     })
     .select()
     .single();
@@ -260,7 +268,23 @@ app.post("/protected/posts", async (c) => {
     }
   }
 
-  return c.json(postData);
+  const { data: hydratedPost, error: hydratedPostError } = await supabase
+    .from("posts")
+    .select(
+      `
+      *,
+      users ( username, avatar ),
+      post_images ( image_url, position )
+    `,
+    )
+    .eq("post_id", postData.post_id)
+    .single();
+
+  if (hydratedPostError) {
+    return c.json(postData);
+  }
+
+  return c.json(hydratedPost);
 });
 
 app.delete("/protected/posts/:id", async (c) => {
@@ -331,13 +355,19 @@ app.get("/posts/:id/comments", async (c) => {
 app.delete("/protected/comments/:id", async (c) => {
   const { id } = c.req.param();
   const supabase = c.get("supabase");
+  const user = c.get("jwtPayload");
 
-  const { error } = await supabase.from("comments").delete().eq("comment_id", id);
-
+  const { data, error } = await supabase
+    .from("comments")
+    .delete()
+    .eq("comment_id", id)
+    .eq("user_id", user.userId)
+    .select()
+    .single();
   if (error) {
     return c.json({ error: error.message }, 500);
   }
 
-  return c.json({ message: "Comment deleted" });
+  return c.json({ message: "Comment deleted", data });
 });
 export default app;

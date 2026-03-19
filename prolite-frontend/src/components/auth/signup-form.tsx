@@ -1,16 +1,17 @@
+// From shadcn
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { Label } from "./ui/label"
+import { Label } from "@/components/ui/label"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
+// React-router Hook & Global state
 import { useAuthStore } from "@/stores/useAuthStore"
 import { useNavigate } from "react-router"
 
-
-
+// Use zod to validate sign up form
 const signupSchema = z.object({
   email: z.email("Invalid email address"),
   username: z
@@ -30,6 +31,7 @@ export function SignupForm({
   ...props
 }: React.ComponentProps<"div">) {
 
+  // Zod variables
   const {
     register,
     handleSubmit,
@@ -38,9 +40,11 @@ export function SignupForm({
     resolver: zodResolver(signupSchema),
   });
 
+  // Use React-router Hook & Global state
   const { signUp } = useAuthStore();
   const navigate = useNavigate();
 
+  // Navigate to SignInPage when registering successfully
   const onSubmit = async (data: SignupFormValues) => {
     const { email, username, password } = data;
     await signUp(email, username, password);
@@ -90,6 +94,7 @@ export function SignupForm({
                 {isSubmitting ? "Creating account..." : "Create Account"}
               </Button>
             </div>
+            {/* Sign in if already having an account */}
             <div className="text-center text-sm mt-4 text-muted-foreground">
               Already have an account?{" "}
               <a
@@ -100,6 +105,7 @@ export function SignupForm({
               </a>
             </div>
           </form>
+          {/* Image */}
           <div className="relative hidden bg-muted md:block">
             <img
               src="/src/assets/signup-image.jpg"
@@ -109,6 +115,7 @@ export function SignupForm({
           </div>
         </CardContent>
       </Card>
+      {/* Footer */}
       <div className="text-xs text-muted-foregroundtext-xs text-balance px-6 text-center *:[a]:hover:text-primary text-muted-foreground *:[a]:underline *:[a]:underline-offetset-4">
         By clicking continue, you agree to our <a href="#">Terms of Service</a>{" "}
         and <a href="#">Privacy Policy</a>.

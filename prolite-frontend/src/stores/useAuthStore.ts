@@ -9,9 +9,14 @@ export const useAuthStore = create<AuthState>()(
       token: null,
       user: null,
       loading: false,
+      hydrated: false,
 
       clearState: () => {
         set({ token: null, user: null, loading: false });
+      },
+
+      setHydrated: (hydrated) => {
+        set({ hydrated });
       },
 
       signUp: async (email, username, password) => {
@@ -27,44 +32,18 @@ export const useAuthStore = create<AuthState>()(
         }
       },
 
-      // signIn: async (email, password) => {
-      //   try {
-      //     set({ loading: true });
-      //     const { token, user } = await authService.signIn(email, password);
-
-      //     console.log("Login successfully !");
-      //     set({ token });
-
-      //     await get().fetchUserData(user.userId);
-      //   } catch (err) {
-      //     console.log("Failed to login", err);
-      //     throw err;
-      //   } finally {
-      //     set({ loading: false });
-      //   }
-      // },
       signIn: async (email, password) => {
         try {
           set({ loading: true });
-
-          //DEMO ACCOUNT
-          if (email === "demo@test.com" && password === "123456") {
-            const fakeUser = {
-              id: "1",
-              username: "demo_user",
-              email,
-            };
-
-            set({
-              token: "fake-token",
-              user: fakeUser,
-            });
-
-            console.log("Demo login successfully !");
-            return;
+          const { token, user } = await authService.signIn(email, password);
+          console.log(user);
+          set({ token, user });
+          try {
+            await get().fetchUserData(user.user_id);
+          } catch (fetchUserError) {
+            console.log("Failed to hydrate user after login", fetchUserError);
           }
-
-          throw { response: { status: 401 } };
+          console.log("Login successfully !");
         } catch (err) {
           console.log("Failed to login", err);
           throw err;
@@ -92,6 +71,13 @@ export const useAuthStore = create<AuthState>()(
     }),
     {
       name: "auth-storage",
+      partialize: (state) => ({
+        token: state.token,
+        user: state.user,
+      }),
+      onRehydrateStorage: () => (state) => {
+        state?.setHydrated(true);
+      },
     },
   ),
 );
