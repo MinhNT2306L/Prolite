@@ -140,7 +140,6 @@ app.post("/login", async (c) => {
     userId: user.user_id,
     email: user.email,
     username: user.username,
-    role: user.role || "user",
     exp: Math.floor(Date.now() / 1000) + 60 * 60, // 1 hour
   };
 
@@ -152,7 +151,6 @@ app.post("/login", async (c) => {
       userId: payload.userId,
       email: payload.email,
       username: payload.username,
-      role: payload.role,
     },
   });
 });
@@ -180,7 +178,7 @@ app.get("/protected/posts/:id", async (c) => {
   const { data, error } = await supabase
     .from("posts")
     .select("*")
-    .eq("post_id", id)
+    .eq("id", id)
     .single();
   if (error) {
     return c.json({ error: error.message }, 500);
@@ -190,19 +188,16 @@ app.get("/protected/posts/:id", async (c) => {
 
 app.get("/posts", async (c) => {
   const supabase = c.get("supabase");
-
+  
   // Join users table to get the author's username
-  // them post like count
   const { data, error } = await supabase
     .from("posts")
-    .select(
-      `
+    .select(`
       *,
       users ( username, avatar ),
-      post_likes ( count )
-    `,
-    )
-    .order("created_at", { ascending: false });
+      post_images ( image_url, position )
+    `)
+    .order('created_at', { ascending: false });
 
   if (error) {
     return c.json({ error: error.message }, 500);
@@ -215,13 +210,11 @@ app.get("/posts/:id", async (c) => {
   const supabase = c.get("supabase");
   const { data, error } = await supabase
     .from("posts")
-    .select(
-      `
+    .select(`
       *,
       users ( username, avatar ),
       post_images ( image_url, position )
-    `,
-    )
+    `)
     .eq("post_id", id)
     .single();
   if (error) {
@@ -231,22 +224,21 @@ app.get("/posts/:id", async (c) => {
 });
 
 app.post("/protected/posts", async (c) => {
-  // bo title vi khong su dung
   const { content, privacy = "public", image_urls = [] } = await c.req.json();
   const supabase = c.get("supabase");
   const jwtPayload = c.get("jwtPayload");
-
+  
   // 1. Insert Post
   const { data: postData, error: postError } = await supabase
     .from("posts")
-    .insert({
-      content,
+    .insert({ 
+      content, 
       privacy,
-      user_id: jwtPayload.userId,
+      user_id: jwtPayload.userId 
     })
     .select()
     .single();
-
+    
   if (postError) {
     return c.json({ error: postError.message }, 500);
   }
@@ -270,13 +262,11 @@ app.post("/protected/posts", async (c) => {
 
   const { data: hydratedPost, error: hydratedPostError } = await supabase
     .from("posts")
-    .select(
-      `
+    .select(`
       *,
       users ( username, avatar ),
       post_images ( image_url, position )
-    `,
-    )
+    `)
     .eq("post_id", postData.post_id)
     .single();
 
@@ -364,6 +354,7 @@ app.delete("/protected/comments/:id", async (c) => {
     .eq("user_id", user.userId)
     .select()
     .single();
+
   if (error) {
     return c.json({ error: error.message }, 500);
   }
